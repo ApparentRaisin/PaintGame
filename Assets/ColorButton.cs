@@ -32,7 +32,7 @@ public class ColorButton : MonoBehaviour, IPointerEnterHandler
             t += Time.deltaTime;
             float delta = t/time;
             yield return new WaitForEndOfFrame();
-            this.transform.parent.localScale = new Vector3(1 - Mathf.Pow(Mathf.PingPong(delta*2,1f),2) * 0.1f, 1 + Mathf.Pow(Mathf.PingPong(delta*2,1f),2) * 0.1f, 1);
+            this.transform.localScale = new Vector3(1 - Mathf.Pow(Mathf.PingPong(delta*2,1f),2) * 0.1f, 1 + Mathf.Pow(Mathf.PingPong(delta*2,1f),2) * 0.1f, 1);
         }while(t < time);
     }
 
