@@ -9,13 +9,11 @@ public class ColorButton : MonoBehaviour, IPointerEnterHandler
     float currentColor;
     public Image childImage;
     Material childMaterial;
-
-    public RectTransform parent;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         childImage.material = new Material(childImage.material);
-        this.GetComponent<Button>().onClick.AddListener(delegate {GlobalCameraData.currentColorValue = currentColor; });
+        this.GetComponentInChildren<Button>().onClick.AddListener(delegate {GlobalCameraData.currentColorValue = currentColor; });
     }
 
     public void OnPointerEnter(PointerEventData eventData)

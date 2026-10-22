@@ -44,6 +44,7 @@ Shader "Custom/PaintShader"
             CBUFFER_START(UnityPerMaterial)
                 float4 _CurrentPaintingTexture_TexelSize;
                 float4 _TextureArray_TexelSize;
+
             CBUFFER_END
 
             StructuredBuffer<CameraData> _CameraDataBuffer;
@@ -86,11 +87,12 @@ Shader "Custom/PaintShader"
             {
                 float4 final = 1;
                 for(int i = 0; i < _TextureCount; i++){
-                    float4 pos = mul(_CameraDataBuffer[i]._FrustrumMatrix,mul(_CameraDataBuffer[i]._CameraTransform,mul(unity_ObjectToWorld, float4(IN.positionOS.xyz,1))));
+                    float4x4 cam = _CameraDataBuffer[i]._CameraTransform;
+                    float4 pos = mul(_CameraDataBuffer[i]._FrustrumMatrix,mul(cam,mul(unity_ObjectToWorld, float4(IN.positionOS.xyz,1))));
                 
                     float4 currentScreenPos = ComputeScreenPos(pos);
                     float2 sc = currentScreenPos.xy/currentScreenPos.w;
-
+                    
                     #if UNITY_UV_STARTS_AT_TOP
                         sc.y = 1-sc.y;
                     #endif
@@ -98,10 +100,10 @@ Shader "Custom/PaintShader"
                     half4 color = SAMPLE_TEXTURE2D_ARRAY(_TextureArray, sampler_PointClamp, sc.xy, i);
                     float depth = (LinearEyeDepth(decode_float(color.ba), _ZBufferParams) - (currentScreenPos.z));
                     //depth += fwidth(depth);
+                    float f = 0;
                     if(sc.y > _TextureArray_TexelSize.y*2 && sc.y < 1-_TextureArray_TexelSize.y*2 && sc.x > _TextureArray_TexelSize.x*2 && sc.x < 1 -_TextureArray_TexelSize.x*2 
-                        && currentScreenPos.z > 0 && depth > 0  && color.g > 0.1){
-                    
-                        //color.rg *= depth;
+                        && currentScreenPos.z > 0 && depth > 0)
+                    {
                         final.rgb = lerp(final.rgb, GetColor(color.r), color.g);//float4(sc.xy,0,1);
                     }
                 }
@@ -120,7 +122,7 @@ Shader "Custom/PaintShader"
                     float depth = (LinearEyeDepth(decode_float(color.ba), _ZBufferParams) - (currentScreenPos.z));
                     //depth += fwidth(depth);
                     if(sc.y > _CurrentPaintingTexture_TexelSize.y*2 && sc.y < 1-_CurrentPaintingTexture_TexelSize.y*2 && sc.x > _CurrentPaintingTexture_TexelSize.x*2 && sc.x < 1 -_CurrentPaintingTexture_TexelSize.x*2 
-                        && currentScreenPos.z > 0 && depth > 0 && color.g > 0.1){
+                        && currentScreenPos.z > 0 && depth > 0){
                     
                         //color.rg *= depth;
                         final.rgb = lerp(final.rgb, GetColor(color.r), color.g);//float4(sc.xy,0,1);
@@ -135,7 +137,7 @@ Shader "Custom/PaintShader"
                     final = lerp(final, 0.5, SAMPLE_TEXTURE2D(_BrushTexture,sampler_PointClamp,mouse).a * 0.5);
                 }
                 
-                return final;
+                return max(final, fwidth(final));
                 
             }
             ENDHLSL
