@@ -45,10 +45,6 @@ public class GlobalCameraData : MonoBehaviour
         
         LoadAllTextures();
 
-        foreach(CameraData c in cameraDataArray)
-        {
-            Debug.Log(c.TransformMatrix);
-        }
     }
 
     void OnDisable()
@@ -166,7 +162,12 @@ public class GlobalCameraData : MonoBehaviour
             i++;
         }
 
-        cameraDataBuffer.GetData(cameraDataArray);    
+        currentTextureCount = i;
+
+        Shader.SetGlobalBuffer("_CameraDataBuffer", cameraDataBuffer);
+        Shader.SetGlobalBuffer("_MovingTransfromBuffer", movingTransformBuffer);
+        Shader.SetGlobalTexture("_TextureArray", textureArray);
+        Shader.SetGlobalInt("_TextureCount", currentTextureCount);
         
     }
     public void LoadTexture(Texture2D tex, int index)
