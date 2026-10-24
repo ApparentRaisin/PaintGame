@@ -27,7 +27,7 @@ Shader "Custom/PaintShader"
                 float4 positionOS : TEXCOORD1;
             };
 
-            TEXTURE2D(_CurrentPaintingTexture);
+            TEXTURE2D_ARRAY(_CurrentPaintingTexture);
             SAMPLER(sampler_CurrentPaintingTexture);
 
             TEXTURE2D_ARRAY(_TextureArray);
@@ -35,6 +35,9 @@ Shader "Custom/PaintShader"
 
             TEXTURE2D(_BrushTexture);
             float4 _MouseData;
+
+            float _PlayerCount;
+            float _PlayerDrawing[8];
 
             struct CameraData{
                 float4x4 _CameraTransform;
@@ -108,35 +111,38 @@ Shader "Custom/PaintShader"
                     }
                 }
 
-                if(_IsDrawing > 0.5){
-                    float4 pos = mul(_CameraDataBuffer[_TextureCount]._FrustrumMatrix,mul(_CameraDataBuffer[_TextureCount]._CameraTransform,mul(unity_ObjectToWorld, float4(IN.positionOS.xyz,1))));
-                
-                    float4 currentScreenPos = ComputeScreenPos(pos);
-                    float2 sc = currentScreenPos.xy/currentScreenPos.w;
+                for(int n = 0; n < _PlayerCount; n++){
+                    if(_PlayerDrawing[n] > 0.5)
+                    {
+                        float4 pos = mul(_CameraDataBuffer[_TextureCount + n]._FrustrumMatrix,mul(_CameraDataBuffer[_TextureCount + n]._CameraTransform,mul(unity_ObjectToWorld, float4(IN.positionOS.xyz,1))));
+                        
+                        float4 currentScreenPos = ComputeScreenPos(pos);
+                        float2 sc = currentScreenPos.xy/currentScreenPos.w;
 
-                    #if UNITY_UV_STARTS_AT_TOP
-                        sc.y = 1-sc.y;
-                    #endif
-                    //UNITY_SAMPLE_TEX2DARRAY(_MyArr, i.uv);
-                    half4 color = SAMPLE_TEXTURE2D(_CurrentPaintingTexture, sampler_PointClamp, sc.xy);
-                    float depth = (LinearEyeDepth(decode_float(color.ba), _ZBufferParams) - (currentScreenPos.z));
-                    //depth += fwidth(depth);
-                    if(sc.y > _CurrentPaintingTexture_TexelSize.y*2 && sc.y < 1-_CurrentPaintingTexture_TexelSize.y*2 && sc.x > _CurrentPaintingTexture_TexelSize.x*2 && sc.x < 1 -_CurrentPaintingTexture_TexelSize.x*2 
-                        && currentScreenPos.z > 0 && depth > 0){
+                        #if UNITY_UV_STARTS_AT_TOP
+                            sc.y = 1-sc.y;
+                        #endif
+                        //UNITY_SAMPLE_TEX2DARRAY(_MyArr, i.uv);
+                        half4 color = SAMPLE_TEXTURE2D_ARRAY(_CurrentPaintingTexture, sampler_PointClamp, sc.xy, n);
+                        float depth = (LinearEyeDepth(decode_float(color.ba), _ZBufferParams) - (currentScreenPos.z));
+                        //depth += fwidth(depth);
+                        if(sc.y > _CurrentPaintingTexture_TexelSize.y*2 && sc.y < 1-_CurrentPaintingTexture_TexelSize.y*2 && sc.x > _CurrentPaintingTexture_TexelSize.x*2 && sc.x < 1 -_CurrentPaintingTexture_TexelSize.x*2 
+                            && currentScreenPos.z > 0 && depth > 0){
+                            
+                            //color.rg *= depth;
+                            final.rgb = lerp(final.rgb, GetColor(color.r), color.g);//float4(sc.xy,0,1);
+                        }
                     
-                        //color.rg *= depth;
-                        final.rgb = lerp(final.rgb, GetColor(color.r), color.g);//float4(sc.xy,0,1);
+                        float2 mouse = _MouseData.xy/_ScreenParams.xy;
+
+                        mouse -= sc - float2(1/_MouseData.w,1/_MouseData.w)*float2(_ScreenParams.y/_ScreenParams.x,1)*0.5;
+                        mouse.x *= (_ScreenParams.x/_ScreenParams.y);
+                        mouse *= _MouseData.w;
+
+                        final = lerp(final, 0.5, SAMPLE_TEXTURE2D(_BrushTexture,sampler_PointClamp,mouse).a * 0.5);
                     }
-    
-                    float2 mouse = _MouseData.xy/_ScreenParams.xy;
-                    
-                    mouse -= sc - float2(1/_MouseData.w,1/_MouseData.w)*float2(_ScreenParams.y/_ScreenParams.x,1)*0.5;
-                    mouse.x *= (_ScreenParams.x/_ScreenParams.y);
-                    mouse *= _MouseData.w;
-
-                    final = lerp(final, 0.5, SAMPLE_TEXTURE2D(_BrushTexture,sampler_PointClamp,mouse).a * 0.5);
                 }
-                
+
                 return max(final, fwidth(final));
                 
             }

@@ -81,8 +81,7 @@ void Decode(uint3 id : SV_DispatchThreadID){
     camData[index]._FrustrumMatrix[3][2] = DecodeFloatRGBA(Result[float2(14,1)])*200.-100.;
     camData[index]._FrustrumMatrix[3][3] = DecodeFloatRGBA(Result[float2(15,1)])*200.-100.;
 
-    [loop]
-    for(int i = 0; i < 30; i++){
-        movingTransforms[index + i] = DecodeMatrix4x4(float2(i*16, 539));
+    for(int i = 0; i < 60; i++){
+        movingTransforms[(index*60) + i] = DecodeMatrix4x4(float2(i*16, 539));
     }
 }

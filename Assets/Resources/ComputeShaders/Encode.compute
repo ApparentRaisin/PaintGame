@@ -25,7 +25,7 @@ inline float4 EncodeFloatRGBA(float v)
 }
 
 void EncodeMatrix4x4(float2 start, float4x4 mat){
-    Result[start + float2(0 ,0)] = EncodeFloatRGBA((mat[0][1]+100.)/200.);
+    Result[start + float2(0 ,0)] = EncodeFloatRGBA((mat[0][0]+100.)/200.);
     Result[start + float2(1 ,0)] = EncodeFloatRGBA((mat[0][1]+100.)/200.);
     Result[start + float2(2 ,0)] = EncodeFloatRGBA((mat[0][2]+100.)/200.);
     Result[start + float2(3 ,0)] = EncodeFloatRGBA((mat[0][3]+100.)/200.);
@@ -79,7 +79,7 @@ void Encode(uint3 id : SV_DispatchThreadID){
     Result[float2(14,1)] = EncodeFloatRGBA((camData[index]._FrustrumMatrix[3][2]+100.)/200.);
     Result[float2(15,1)] = EncodeFloatRGBA((camData[index]._FrustrumMatrix[3][3]+100.)/200.);
 
-    for(int i = 0; i < 30; i++){
-        EncodeMatrix4x4(float2(i * 16, 539), movingTransforms[index + i]);
+    for(int i = 0; i < 60; i++){
+        EncodeMatrix4x4(float2(i * 16, 539), movingTransforms[(index * 60) + i]);
     }
 }

@@ -3,14 +3,15 @@
 #include "UnityCG.cginc"
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
-RWTexture2D<half4> Result;
+RWTexture2DArray<half4> Result;
 Texture2D<float> _CameraDepthTexture;
-Texture2D<float4> _Dither;
 Texture2D<float4> _BrushTexture;
 float4 _MouseData;
 half4x4 _CameraTransform;
 half4x4 _FrustrumMatrix;
 float _Color;
+float _TimeUnscaled;
+int _Player;
 
 float2 encode_float(float v) {
   float2 c = float2(0.0, 0.0);
@@ -57,6 +58,7 @@ float hash12(float2 p)
 [numthreads(8,8,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
+    
     float size = _MouseData.w;
     // TODO: insert actual code here!
     float2 mouse = _MouseData.xy/_ScreenParams.xy;
@@ -70,13 +72,13 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     half dist =  0;//clamp((10 - distance(mouse,id.xy)),0,1) * _MouseData.z;
     if(mouse.x > 0 && mouse.x < 512 && mouse.y > 0 && mouse.y < 512 && _MouseData.z)
     {
-      dist = hash12(floor(id.xy+_Time.yy*10)) <= _BrushTexture[mouse].a * 1.05f;
+      dist = hash12(floor(id.xy+float2(1,1)*_TimeUnscaled*10)) <= _BrushTexture[mouse].a * 1.05f;
     }
 
     //half dist =  clamp((10 - distance(mouse,id.xy)),0,1) * _MouseData.z;// * unity_DeltaTime * 10;
     half2 depth = encode_float(depthValue);
     //float ditherValue = _Dither[id.xy] < _BrushTexture[mouse].a;
-    Result[id.xy] = float4(lerp(Result[id.xy].r, _Color, dist > 0.), clamp(Result[id.xy].g + (dist> 0.),0,1),  dist > 0 ? depth : Result[id.xy].ba);
+    Result[uint3(id.xy,_Player)] = float4(lerp(Result[uint3(id.xy,_Player)].r, _Color, dist > 0.), clamp(Result[uint3(id.xy,_Player)].g + (dist> 0.),0,1),  dist > 0 ? depth : Result[uint3(id.xy,_Player)].ba);
     
 }
 

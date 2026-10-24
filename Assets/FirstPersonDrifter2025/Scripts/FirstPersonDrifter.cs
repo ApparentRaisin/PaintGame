@@ -6,9 +6,10 @@
 using UnityEngine;
 using System.Collections;
 using UnityEngine.InputSystem;
+using Unity.Netcode.Components;
 
 [RequireComponent (typeof (CharacterController))]
-public class FirstPersonDrifter: MonoBehaviour
+public class FirstPersonDrifter: NetworkTransform
 {
     public float walkSpeed = 6.0f;
     public float runSpeed = 10.0f;
@@ -73,7 +74,8 @@ public class FirstPersonDrifter: MonoBehaviour
     }
  
     void FixedUpdate() {
-        if(locked)
+        
+        if(locked || !IsSpawned || !HasAuthority)
             return;
             
         Vector2 moveVector = move.ReadValue<Vector2>();

@@ -11,19 +11,21 @@ public class MovingObject : MonoBehaviour
     {
         if (Application.isPlaying == false)
         {
-            thisCount = currentCount;
-            currentCount++;
+            
         }
         else
         {
-            movingObjectsInScene[thisCount] = this;
+            /*movingObjectsInScene[thisCount] = this;
             currentCount++;
 
             MaterialPropertyBlock block = new MaterialPropertyBlock();
             block.SetInt("_objectIndex", thisCount);
 
-            this.GetComponent<MeshRenderer>().SetPropertyBlock(block);
-        }   
+            this.GetComponent<MeshRenderer>().SetPropertyBlock(block);*/
+        }
+
+        thisCount = currentCount;
+        currentCount++;   
     }
 
     public Matrix4x4 GetLocalToWorld()
