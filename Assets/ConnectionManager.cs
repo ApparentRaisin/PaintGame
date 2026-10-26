@@ -5,6 +5,7 @@ using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Multiplayer;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class ConnectionManager : MonoBehaviour
 {
@@ -27,7 +28,13 @@ public class ConnectionManager : MonoBehaviour
         m_NetworkManager = GetComponent<NetworkManager>();
         m_NetworkManager.OnClientConnectedCallback += OnClientConnectedCallback;
         m_NetworkManager.OnSessionOwnerPromoted += OnSessionOwnerPromoted;
+        //m_NetworkManager.OnClientConnectedCallback += OnConnectionCallback;
         await UnityServices.InitializeAsync();
+    }
+
+    private void OnConnectionCallback(NetworkManager networkManager, ConnectionEventData data)
+    {
+        
     }
 
     private void OnSessionOwnerPromoted(ulong sessionOwnerPromoted)
@@ -37,12 +44,18 @@ public class ConnectionManager : MonoBehaviour
             Debug.Log($"Client-{m_NetworkManager.LocalClientId} is the session owner!");
         }
     }
-
+    public static string profileName, sessionName;
     private void OnClientConnectedCallback(ulong clientId)
     {
         if (m_NetworkManager.LocalClientId == clientId)
         {
             Debug.Log($"Client-{clientId} is connected and can spawn {nameof(NetworkObject)}s.");
+        }
+
+        if(m_NetworkManager.CurrentSessionOwner == m_NetworkManager.LocalClientId && clientId != m_NetworkManager.LocalClientId)
+        {
+            //PaintController.SendAllTextures(sessionName, SceneManager.GetActiveScene().name);
+            Debug.Log("session owner");
         }
     }
 
@@ -78,10 +91,14 @@ public class ConnectionManager : MonoBehaviour
        _session?.LeaveAsync();
    }
 
+   
+
    private async Task CreateOrJoinSessionAsync()
    {
        _state = ConnectionState.Connecting;
-
+        sessionName = _sessionName;
+        profileName = _profileName;
+        Debug.Log(_sessionName);
        try
        {
            AuthenticationService.Instance.SwitchProfile(_profileName);
@@ -91,10 +108,14 @@ public class ConnectionManager : MonoBehaviour
                 Name = _sessionName,
                 MaxPlayers = _maxPlayers
             }.WithDistributedAuthorityNetwork();
+            
+            
 
             _session = await MultiplayerService.Instance.CreateOrJoinSessionAsync(_sessionName, options);
 
            _state = ConnectionState.Connected;
+
+            
        }
        catch (Exception e)
        {

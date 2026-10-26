@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using UnityEngine.SceneManagement;
-
+using UnityEngine.Rendering.Universal;
 using Unity.Netcode;
 
 public class GlobalCameraData : NetworkBehaviour
@@ -11,24 +11,33 @@ public class GlobalCameraData : NetworkBehaviour
     ComputeShader computeShader;
     InputAction mousePosition, mouseClick, altAction, scrollWheel;
     bool captured = false;
-    bool draw = true;
+    bool draw = false;
     int playerNumber;
     static int playerCount;
     public static float currentColorValue;
     public Texture2D paintbrushTexture;
     float brushSize = 0.5f;
     int kernelHandle;
-    static List<float> playerDrawing = new List<float>();
+    static float[] playerDrawing = new float[8];
+    NetworkList<float> testList;
+    NetworkList<CameraData> dataList;
+    public Texture2D test;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
+    void Awake()
+    {
+        testList = new NetworkList<float>();
+        dataList = new NetworkList<CameraData>();
+    }
+
     void Start()
     {
-        
         thisCamera = this.GetComponent<Camera>();
         
         if(!IsSpawned || !HasAuthority)
         {
-            Destroy(thisCamera);
-            Destroy(this);
+            thisCamera.enabled = false;
+            this.enabled = false;
+            
             return;
         }
         mousePosition = InputSystem.actions.FindAction("Point");
@@ -38,29 +47,58 @@ public class GlobalCameraData : NetworkBehaviour
         altAction.started += ToggleDraw;
         
         computeShader = Resources.Load<ComputeShader>("ComputeShaders/DrawCompute");
+        if(NetworkManager.LocalClientId == NetworkManager.CurrentSessionOwner)
+        {
+            PaintController.LoadAllTextures(ConnectionManager.sessionName,SceneManager.GetActiveScene().name);
+        }
+        else
+        {
+            PaintController.SetupNoLoad(ConnectionManager.sessionName,SceneManager.GetActiveScene().name);
+        }
         
-        
-        PaintController.LoadAllTextures(SceneManager.GetActiveScene().name);
 
         Cursor.lockState = CursorLockMode.Locked;
 
-        playerCount++;
-        playerDrawing.Add(0);
+        playerNumber = (int)NetworkManager.LocalClientId - 1;
+        playerCount = NetworkManager.ConnectedClientsIds.Count;
+        testList.OnListChanged += OnListChange;
         Shader.SetGlobalInt("_PlayerCount", playerCount);
         Shader.SetGlobalFloatArray("_PlayerDrawing", playerDrawing);
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        testList.Add(0);
+        testList.IsDirty();
+        dataList.Add(new CameraData(thisCamera));
+        dataList.IsDirty();
+        Debug.Log(dataList.Count);
+    }
+
+    void OnListChange(NetworkListEvent<float> changeEvent)
+    {
+        Debug.Log(changeEvent.Index +" player is drawing");
     }
     
     void ToggleDraw(InputAction.CallbackContext context)
     {
+        if(!IsSpawned || !HasAuthority)
+        {
+            return;
+        }
+
         if (context.phase == InputActionPhase.Started)
         {
             Debug.Log("toggle");
             draw = !draw;
             if (draw)
             {
-                
-                PaintController.StartPainting(thisCamera, playerNumber);
                 playerDrawing[playerNumber] = 1;
+                testList[playerNumber] = 1;
+                dataList[playerNumber] = new CameraData(thisCamera);
+                testList.IsDirty();
+                dataList.IsDirty();
+                PaintController.StartPainting(thisCamera, playerNumber);
                 Shader.SetGlobalFloatArray("_PlayerDrawing", playerDrawing);
                 captured = false;
                 FirstPersonDrifter.locked = true;
@@ -71,13 +109,14 @@ public class GlobalCameraData : NetworkBehaviour
             else
             {
                 playerDrawing[playerNumber] = 0;
+                testList[playerNumber] = 0;
+                testList.IsDirty();
                 Shader.SetGlobalFloatArray("_PlayerDrawing", playerDrawing);
                 FirstPersonDrifter.locked = false;
                 MouseLook.locked = false;
                 Cursor.lockState = CursorLockMode.Locked;
-                PaintController.SaveTexture(SceneManager.GetActiveScene().name, playerNumber);
+                PaintController.SaveTexture(ConnectionManager.sessionName,SceneManager.GetActiveScene().name, playerNumber);
                 Time.timeScale = 1;
-                
             }
             
 
@@ -85,16 +124,41 @@ public class GlobalCameraData : NetworkBehaviour
     }
     
     //toggling the capture so that only one depth textures i captured - this is weird that its needed - research more
+    float nT = 1.2f;
     void Update()
     {
+        if(!IsSpawned || !HasAuthority)
+        {
+            return;
+        }
+
         if (draw)
         {
             captured = false;
+            if(Time.time+(playerNumber/8f) > nT)
+            {
+                nT += 0.2f;
+                TextureSend.instance.SendTexture(PaintController.GetCurrentPaintTex(), 960, 540, playerNumber);
+            }
+        }
+
+        for(int i = 0; i < dataList.Count; i++)
+        {
+            if(i != playerNumber)
+            {
+                playerDrawing[i] = testList[i];
+                PaintController.SetCurrentCameraData(dataList[i], i);
+            }            
         }
     }
     //Drawing effect - has to be done on render object to collect Camera Depth Texture
     void OnRenderObject()
     {
+        if(!IsSpawned || !HasAuthority)
+        {
+            return;
+        }
+        
         if (!captured)
         {
             Vector2 mPos = mousePosition.ReadValue<Vector2>();
@@ -120,7 +184,6 @@ public class GlobalCameraData : NetworkBehaviour
             Shader.SetGlobalTexture("_CurrentPaintingTexture", PaintController.GetCurrentPaintTex());
             Shader.SetGlobalTexture("_BrushTexture", paintbrushTexture);
             Shader.SetGlobalVector("_MouseData", mouseData);
-            
             captured = true;
         }
         

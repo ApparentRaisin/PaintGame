@@ -1,16 +1,27 @@
 using UnityEngine;
 using System.IO;
-using Unity.Netcode.Components;
-public class PaintController : MonoBehaviour
+using Unity.Netcode;
+public class PaintController : NetworkBehaviour
 {
     static ComputeShader encodeShader, decodeShader;
-    static ComputeBuffer cameraDataBuffer, movingTransformBuffer;
+    static ComputeBuffer currentCameraBuffer, cameraDataBuffer, movingTransformBuffer;
     static Texture2DArray textureArray;
     static int currentTextureCount = 0;
-    static CameraData[] cameraDataArray = new CameraData[128];
+    static CameraData[] cameraDataArray = new CameraData[128], currentCamera = new CameraData[8];
     static Matrix4x4[] movingObjectTransforms = new Matrix4x4[128 * 60];
     static bool primed;
-    static RenderTexture paintTex;
+    public static RenderTexture paintTex;
+    public RenderTexture test;
+
+    public static void SetCurrentCameraData(CameraData data, int player)
+    {
+        currentCamera[player] = data;
+    }
+
+    public static void SetPaintTex(Texture2D tex, int player)
+    {
+        Graphics.Blit(tex, paintTex, 0, player);
+    }
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     static void Prime()
     {
@@ -20,12 +31,15 @@ public class PaintController : MonoBehaviour
             decodeShader = Resources.Load<ComputeShader>("ComputeShaders/Decode");
 
             cameraDataBuffer = new ComputeBuffer(128, sizeof(float) * 4 * 4 * 2);
+            currentCameraBuffer = new ComputeBuffer(8, sizeof(float) * 4 * 4 * 2);
             movingTransformBuffer = new ComputeBuffer(128 * 60, sizeof(float) * 4 * 4);
 
             textureArray = new Texture2DArray(960,540, 128, TextureFormat.RGBA32, false, true) { filterMode = FilterMode.Point, };
-
-            paintTex = new RenderTexture(960,540, 32, RenderTextureFormat.ARGBFloat) { enableRandomWrite = true, filterMode = FilterMode.Point, isPowerOfTwo = false, dimension = UnityEngine.Rendering.TextureDimension.Tex2DArray};
+            
+            paintTex = new RenderTexture(960,540, 32, RenderTextureFormat.ARGBFloat) { enableRandomWrite = true, filterMode = FilterMode.Point, isPowerOfTwo = false, dimension = UnityEngine.Rendering.TextureDimension.Tex2DArray, volumeDepth = 8};
+            
             Graphics.Blit(Texture2D.blackTexture, paintTex);
+            Shader.SetGlobalBuffer("_CurrentCameraDataBuffer", currentCameraBuffer);
             primed = true;
         }
     }
@@ -57,20 +71,38 @@ public class PaintController : MonoBehaviour
         encodeShader.SetBuffer(kH, "movingTransforms", movingTransformBuffer);
         encodeShader.SetInt("index", currentTextureCount);
         encodeShader.Dispatch(kH,1,1,1);
-        
         Texture2D tex = toTexture2D(tempTex, out bytes);
         RenderTexture.ReleaseTemporary(tempTex);
         return tex;
     }
-    public static void SaveTexture(string sceneName, int player)
+    public static void SaveTexture(string session, string sceneName, int player)
     {
         Prime();
         byte[] bytes;
+        currentCameraBuffer.GetData(currentCamera);
+        cameraDataBuffer.GetData(cameraDataArray);
+        cameraDataArray[currentTextureCount] = currentCamera[player];
+        cameraDataBuffer.SetData(cameraDataArray);
         Graphics.CopyTexture(PngPrep(paintTex, player, out bytes), 0, textureArray, currentTextureCount);
+        Directory.CreateDirectory(Application.dataPath + "/Pictures/"+session + "_" + sceneName+"/");
+        File.WriteAllBytes(Application.dataPath + "/Pictures/"+session + "_" + sceneName+"/Pic-" + currentTextureCount + ".png", bytes);
         currentTextureCount++;
-        File.WriteAllBytes(Application.dataPath + "/Pictures/"+sceneName+"/Pic-" + UnityEngine.Random.Range(1000,10000) + ".png", bytes);
+        TextureSend.instance.SendData(bytes);
         Shader.SetGlobalBuffer("_CameraDataBuffer", cameraDataBuffer);
         Shader.SetGlobalBuffer("_MovingTransfromBuffer", movingTransformBuffer);
+        Shader.SetGlobalTexture("_TextureArray", textureArray);
+        Shader.SetGlobalInt("_TextureCount", currentTextureCount);
+    }
+
+    public static void SaveTexture(string session, string sceneName, Texture2D tex, byte[] bytes)
+    {
+        Prime();
+        AddTextureToArray(tex,textureArray,currentTextureCount);
+        Directory.CreateDirectory(Application.dataPath + "/Pictures/"+session + "_" + sceneName+"/");
+        File.WriteAllBytes(Application.dataPath + "/Pictures/"+session + "_" + sceneName+"/Pic-" + currentTextureCount + ".png", bytes);
+        currentTextureCount++;
+        Shader.SetGlobalBuffer("_CameraDataBuffer", cameraDataBuffer);
+        Shader.SetGlobalBuffer("_MovingTransfroms", movingTransformBuffer);
         Shader.SetGlobalTexture("_TextureArray", textureArray);
         Shader.SetGlobalInt("_TextureCount", currentTextureCount);
     }
@@ -89,11 +121,11 @@ public class PaintController : MonoBehaviour
     {
         return paintTex.height;
     }
-    public static void LoadAllTextures(string sceneName)
+    public static void LoadAllTextures(string session, string sceneName)
     {
         Prime();
-        Directory.CreateDirectory(Application.dataPath + "/Pictures/"+sceneName+"/");
-        string[] pictures = Directory.GetFiles(Application.dataPath + "/Pictures/"+sceneName+"/", "*.png", SearchOption.AllDirectories);
+        Directory.CreateDirectory(Application.dataPath + "/Pictures/"+ session + "_" + sceneName +"/");
+        string[] pictures = Directory.GetFiles(Application.dataPath + "/Pictures/"+ session + "_" + sceneName +"/", "*.png", SearchOption.AllDirectories);
         int i = 0;
 
         cameraDataBuffer.SetData(cameraDataArray);
@@ -114,12 +146,32 @@ public class PaintController : MonoBehaviour
         Shader.SetGlobalBuffer("_MovingTransforms", movingTransformBuffer);
         Shader.SetGlobalTexture("_TextureArray", textureArray);
         Shader.SetGlobalInt("_TextureCount", currentTextureCount);
+    }
 
-        cameraDataBuffer.GetData(cameraDataArray);
-        Debug.Log(cameraDataArray[0].TransformMatrix);
-        Debug.Log(cameraDataArray[1].TransformMatrix);
-        
-    }   
+    public static void SetupNoLoad(string session, string sceneName)
+    {
+        Prime();
+        Directory.CreateDirectory(Application.dataPath + "/Pictures/"+ session + "_" + sceneName +"/");
+        cameraDataBuffer.SetData(cameraDataArray);
+        movingTransformBuffer.SetData(movingObjectTransforms);
+
+        Shader.SetGlobalBuffer("_CameraDataBuffer", cameraDataBuffer);
+        Shader.SetGlobalBuffer("_MovingTransforms", movingTransformBuffer);
+        Shader.SetGlobalTexture("_TextureArray", textureArray);
+        Shader.SetGlobalInt("_TextureCount", currentTextureCount);
+    }
+
+    public static void SendAllTextures(string session, string sceneName)
+    {
+        Directory.CreateDirectory(Application.dataPath + "/Pictures/"+ session + "_" + sceneName +"/");
+        string[] pictures = Directory.GetFiles(Application.dataPath + "/Pictures/"+ session + "_" + sceneName +"/", "*.png", SearchOption.AllDirectories);
+
+        foreach(string p in pictures)
+        {
+            byte[] bytes = File.ReadAllBytes(p);
+            TextureSend.instance.SendData(bytes);
+        }
+    }
     static void AddTextureToArray(Texture2D tex, Texture2DArray array, int index)
     {
         LoadTexture(tex, index);
@@ -138,13 +190,14 @@ public class PaintController : MonoBehaviour
     public static void StartPainting(Camera camera, int playerNumber)
     {
         Graphics.Blit(Texture2D.blackTexture, paintTex, 0, playerNumber);
-        cameraDataBuffer.GetData(cameraDataArray);
+        currentCameraBuffer.GetData(currentCamera);
         movingTransformBuffer.GetData(movingObjectTransforms);
-        cameraDataArray[currentTextureCount + playerNumber] = new CameraData(camera);
+        currentCamera[playerNumber] = new CameraData(camera);
         CollectTransforms();
-        cameraDataBuffer.SetData(cameraDataArray);
+        currentCameraBuffer.SetData(currentCamera);
         movingTransformBuffer.SetData(movingObjectTransforms);
         Shader.SetGlobalBuffer("_CameraDataBuffer", cameraDataBuffer);
+        Shader.SetGlobalBuffer("_CurrentCameraDataBuffer", currentCameraBuffer);
         Shader.SetGlobalBuffer("_MovingTransforms", movingTransformBuffer);
         Shader.SetGlobalTexture("_CurrentPaintingTexture", paintTex);
     }
@@ -158,7 +211,7 @@ public class PaintController : MonoBehaviour
         }
     }
 }
-public struct CameraData
+public struct CameraData : System.IEquatable<CameraData>, INetworkSerializeByMemcpy
 {
     public Matrix4x4 TransformMatrix;
     public Matrix4x4 ProjectionMatrix;
@@ -167,4 +220,9 @@ public struct CameraData
         this.TransformMatrix = camera.worldToCameraMatrix;
         this.ProjectionMatrix = camera.projectionMatrix;
     }
+    public bool Equals(CameraData other)
+    {
+        return TransformMatrix.Equals(other.TransformMatrix) && ProjectionMatrix.Equals(other.ProjectionMatrix);
+    }
+
 }

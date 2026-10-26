@@ -50,7 +50,7 @@ Shader "Custom/PaintShader"
 
             CBUFFER_END
 
-            StructuredBuffer<CameraData> _CameraDataBuffer;
+            StructuredBuffer<CameraData> _CameraDataBuffer, _CurrentCameraDataBuffer;
             int _TextureCount;
             int _IsDrawing;
             Varyings vert(Attributes IN)
@@ -114,7 +114,7 @@ Shader "Custom/PaintShader"
                 for(int n = 0; n < _PlayerCount; n++){
                     if(_PlayerDrawing[n] > 0.5)
                     {
-                        float4 pos = mul(_CameraDataBuffer[_TextureCount + n]._FrustrumMatrix,mul(_CameraDataBuffer[_TextureCount + n]._CameraTransform,mul(unity_ObjectToWorld, float4(IN.positionOS.xyz,1))));
+                        float4 pos = mul(_CurrentCameraDataBuffer[n]._FrustrumMatrix,mul(_CurrentCameraDataBuffer[n]._CameraTransform,mul(unity_ObjectToWorld, float4(IN.positionOS.xyz,1))));
                         
                         float4 currentScreenPos = ComputeScreenPos(pos);
                         float2 sc = currentScreenPos.xy/currentScreenPos.w;

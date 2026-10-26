@@ -82,4 +82,6 @@ void Encode(uint3 id : SV_DispatchThreadID){
     for(int i = 0; i < 60; i++){
         EncodeMatrix4x4(float2(i * 16, 539), movingTransforms[(index * 60) + i]);
     }
+
+    Result[float2(959,0)] = float4(0,0,0,0);
 }
