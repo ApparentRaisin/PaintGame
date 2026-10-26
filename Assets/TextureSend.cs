@@ -87,12 +87,12 @@ public class TextureSend : NetworkBehaviour
         int player = Mathf.FloorToInt(c.x*5f+0.5f);
         if(player == 0)
         {
-            Debug.Log(player);
+            Debug.Log("Save");
             PaintController.SaveTexture(ConnectionManager.sessionName, SceneManager.GetActiveScene().name, texture, data);
         }
         else
         {
-            Debug.Log(player);
+            Debug.Log("set active");
             PaintController.SetPaintTex(texture, player-1);
         }
             

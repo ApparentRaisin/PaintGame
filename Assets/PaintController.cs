@@ -136,6 +136,7 @@ public class PaintController : NetworkBehaviour
             byte[] bytes = File.ReadAllBytes(p);
             Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false, true) { filterMode = FilterMode.Point};
             ImageConversion.LoadImage(tex, bytes);
+            TextureSend.instance.SendData(bytes);
             AddTextureToArray(tex, textureArray, i);
             i++;
         }
@@ -201,6 +202,8 @@ public class PaintController : NetworkBehaviour
         Shader.SetGlobalBuffer("_MovingTransforms", movingTransformBuffer);
         Shader.SetGlobalTexture("_CurrentPaintingTexture", paintTex);
     }
+
+    
     static void CollectTransforms()
     {
         int start = currentTextureCount * 60;

@@ -19,15 +19,7 @@ public class GlobalCameraData : NetworkBehaviour
     float brushSize = 0.5f;
     int kernelHandle;
     static float[] playerDrawing = new float[8];
-    NetworkList<float> testList;
-    NetworkList<CameraData> dataList;
     public Texture2D test;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Awake()
-    {
-        testList = new NetworkList<float>();
-        dataList = new NetworkList<CameraData>();
-    }
 
     void Start()
     {
@@ -61,23 +53,21 @@ public class GlobalCameraData : NetworkBehaviour
 
         playerNumber = (int)NetworkManager.LocalClientId - 1;
         playerCount = NetworkManager.ConnectedClientsIds.Count;
-        testList.OnListChanged += OnListChange;
         Shader.SetGlobalInt("_PlayerCount", playerCount);
         Shader.SetGlobalFloatArray("_PlayerDrawing", playerDrawing);
     }
 
     public override void OnNetworkSpawn()
     {
-        testList.Add(0);
-        testList.IsDirty();
-        dataList.Add(new CameraData(thisCamera));
-        dataList.IsDirty();
-        Debug.Log(dataList.Count);
+        
     }
 
-    void OnListChange(NetworkListEvent<float> changeEvent)
+    [Rpc(SendTo.Everyone)]
+    void SendCameraDataRPC(int player, int drawing, CameraData data)
     {
-        Debug.Log(changeEvent.Index +" player is drawing");
+        Debug.Log("got " + data.TransformMatrix + "from player " + player);
+            playerDrawing[player] = drawing;
+            PaintController.SetCurrentCameraData(data, player);
     }
     
     void ToggleDraw(InputAction.CallbackContext context)
@@ -94,11 +84,8 @@ public class GlobalCameraData : NetworkBehaviour
             if (draw)
             {
                 playerDrawing[playerNumber] = 1;
-                testList[playerNumber] = 1;
-                dataList[playerNumber] = new CameraData(thisCamera);
-                testList.IsDirty();
-                dataList.IsDirty();
                 PaintController.StartPainting(thisCamera, playerNumber);
+                SendCameraDataRPC(playerNumber, 1, new CameraData(thisCamera));
                 Shader.SetGlobalFloatArray("_PlayerDrawing", playerDrawing);
                 captured = false;
                 FirstPersonDrifter.locked = true;
@@ -109,8 +96,7 @@ public class GlobalCameraData : NetworkBehaviour
             else
             {
                 playerDrawing[playerNumber] = 0;
-                testList[playerNumber] = 0;
-                testList.IsDirty();
+                SendCameraDataRPC(playerNumber, 0, new CameraData(thisCamera));
                 Shader.SetGlobalFloatArray("_PlayerDrawing", playerDrawing);
                 FirstPersonDrifter.locked = false;
                 MouseLook.locked = false;
@@ -140,15 +126,6 @@ public class GlobalCameraData : NetworkBehaviour
                 nT += 0.2f;
                 TextureSend.instance.SendTexture(PaintController.GetCurrentPaintTex(), 960, 540, playerNumber);
             }
-        }
-
-        for(int i = 0; i < dataList.Count; i++)
-        {
-            if(i != playerNumber)
-            {
-                playerDrawing[i] = testList[i];
-                PaintController.SetCurrentCameraData(dataList[i], i);
-            }            
         }
     }
     //Drawing effect - has to be done on render object to collect Camera Depth Texture
