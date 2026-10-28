@@ -21,17 +21,25 @@ public class GlobalCameraData : NetworkBehaviour
     static float[] playerDrawing = new float[8];
     public Texture2D test;
 
+    bool started = false;
+
+    public bool singlePlayer;
     void Start()
     {
         thisCamera = this.GetComponent<Camera>();
         
-        if(!IsSpawned || !HasAuthority)
+        if((!IsSpawned || !HasAuthority) && !singlePlayer)
         {
             thisCamera.enabled = false;
             this.enabled = false;
-            
+            this.GetComponentInParent<FirstPersonDrifter>().enabled = singlePlayer;
+            this.GetComponentInParent<MouseLook>().enabled = singlePlayer;
+            this.GetComponent<MouseLook>().enabled = singlePlayer;
             return;
         }
+
+        
+
         mousePosition = InputSystem.actions.FindAction("Point");
         mouseClick = InputSystem.actions.FindAction("Click");
         altAction = InputSystem.actions.FindAction("AltAction");
@@ -39,7 +47,7 @@ public class GlobalCameraData : NetworkBehaviour
         altAction.started += ToggleDraw;
         
         computeShader = Resources.Load<ComputeShader>("ComputeShaders/DrawCompute");
-        if(NetworkManager.LocalClientId == NetworkManager.CurrentSessionOwner)
+        if(NetworkManager.LocalClientId == NetworkManager.CurrentSessionOwner || singlePlayer)
         {
             PaintController.LoadAllTextures(ConnectionManager.sessionName,SceneManager.GetActiveScene().name);
         }
@@ -51,28 +59,46 @@ public class GlobalCameraData : NetworkBehaviour
 
         Cursor.lockState = CursorLockMode.Locked;
 
-        playerNumber = (int)NetworkManager.LocalClientId - 1;
-        playerCount = NetworkManager.ConnectedClientsIds.Count;
+        if (!singlePlayer)
+        {
+            playerNumber = (int)NetworkManager.LocalClientId - 1;
+            NetworkManager.OnClientConnectedCallback += OnConnection;
+        }
+        else
+        {
+            playerNumber = 0;
+        }
+
         Shader.SetGlobalInt("_PlayerCount", playerCount);
+        Shader.SetGlobalInt("_Player", playerNumber);
         Shader.SetGlobalFloatArray("_PlayerDrawing", playerDrawing);
+
     }
 
-    public override void OnNetworkSpawn()
+    public void OnConnection(ulong clientID)
     {
-        
+        if(clientID != NetworkManager.LocalClientId)
+        {
+            SendCameraDataRPC(playerNumber, playerDrawing[playerNumber], new CameraData(thisCamera));
+            if(NetworkManager.LocalClientId == NetworkManager.CurrentSessionOwner)
+            {
+                PaintController.SendAllTextures(ConnectionManager.sessionName,SceneManager.GetActiveScene().name);
+            }            
+        }
     }
 
-    [Rpc(SendTo.Everyone)]
-    void SendCameraDataRPC(int player, int drawing, CameraData data)
+    [Rpc(SendTo.NotMe)]
+    void SendCameraDataRPC(int player, float drawing, CameraData data)
     {
         Debug.Log("got " + data.TransformMatrix + "from player " + player);
-            playerDrawing[player] = drawing;
-            PaintController.SetCurrentCameraData(data, player);
+        playerDrawing[player] = drawing;
+        PaintController.SetCurrentCameraData(data, player);
+        Shader.SetGlobalFloatArray("_PlayerDrawing", playerDrawing);
     }
     
     void ToggleDraw(InputAction.CallbackContext context)
     {
-        if(!IsSpawned || !HasAuthority)
+        if((!IsSpawned || !HasAuthority) && !singlePlayer)
         {
             return;
         }
@@ -85,7 +111,9 @@ public class GlobalCameraData : NetworkBehaviour
             {
                 playerDrawing[playerNumber] = 1;
                 PaintController.StartPainting(thisCamera, playerNumber);
-                SendCameraDataRPC(playerNumber, 1, new CameraData(thisCamera));
+                if(!singlePlayer)
+                    SendCameraDataRPC(playerNumber, 1, new CameraData(thisCamera));
+                
                 Shader.SetGlobalFloatArray("_PlayerDrawing", playerDrawing);
                 captured = false;
                 FirstPersonDrifter.locked = true;
@@ -96,12 +124,13 @@ public class GlobalCameraData : NetworkBehaviour
             else
             {
                 playerDrawing[playerNumber] = 0;
-                SendCameraDataRPC(playerNumber, 0, new CameraData(thisCamera));
+                if(!singlePlayer)
+                    SendCameraDataRPC(playerNumber, 0, new CameraData(thisCamera));
                 Shader.SetGlobalFloatArray("_PlayerDrawing", playerDrawing);
                 FirstPersonDrifter.locked = false;
                 MouseLook.locked = false;
                 Cursor.lockState = CursorLockMode.Locked;
-                PaintController.SaveTexture(ConnectionManager.sessionName,SceneManager.GetActiveScene().name, playerNumber);
+                PaintController.SaveTexture(ConnectionManager.sessionName,SceneManager.GetActiveScene().name, playerNumber, singlePlayer);
                 Time.timeScale = 1;
             }
             
@@ -113,7 +142,7 @@ public class GlobalCameraData : NetworkBehaviour
     float nT = 1.2f;
     void Update()
     {
-        if(!IsSpawned || !HasAuthority)
+        if((!IsSpawned || !HasAuthority) && !singlePlayer)
         {
             return;
         }
@@ -121,17 +150,13 @@ public class GlobalCameraData : NetworkBehaviour
         if (draw)
         {
             captured = false;
-            if(Time.time+(playerNumber/8f) > nT)
-            {
-                nT += 0.2f;
-                TextureSend.instance.SendTexture(PaintController.GetCurrentPaintTex(), 960, 540, playerNumber);
-            }
+            
         }
     }
     //Drawing effect - has to be done on render object to collect Camera Depth Texture
     void OnRenderObject()
     {
-        if(!IsSpawned || !HasAuthority)
+        if((!IsSpawned || !HasAuthority) && !singlePlayer)
         {
             return;
         }
@@ -156,12 +181,24 @@ public class GlobalCameraData : NetworkBehaviour
             computeShader.SetInt("_Player", playerNumber);
             
             computeShader.SetTexture(kernelHandle,"_CameraDepthTexture", Shader.GetGlobalTexture("_DepthTexture"));
+            computeShader.SetTexture(kernelHandle,"_LayerTexture", Shader.GetGlobalTexture("_LayerTexture"));
 
             computeShader.Dispatch(kernelHandle, PaintController.GetTextureWidth()/8,PaintController.GetTextureHeight()/8,1);
             Shader.SetGlobalTexture("_CurrentPaintingTexture", PaintController.GetCurrentPaintTex());
             Shader.SetGlobalTexture("_BrushTexture", paintbrushTexture);
             Shader.SetGlobalVector("_MouseData", mouseData);
+
             captured = true;
+
+            if(singlePlayer)
+                return;
+            
+            if(Time.unscaledTime+(playerNumber/8f) > nT)
+            {
+                Debug.Log("paint tick");
+                nT = Time.unscaledTime+(playerNumber/8f) + 0.1f;
+                TextureSend.instance.SendTexture(PaintController.GetCurrentPaintTex(), 960, 540, playerNumber);
+            }
         }
         
     }

@@ -39,6 +39,8 @@ Shader "Custom/PaintShader"
             float _PlayerCount;
             float _PlayerDrawing[8];
 
+            float _Player;
+
             struct CameraData{
                 float4x4 _CameraTransform;
                 float4x4 _FrustrumMatrix;
@@ -88,7 +90,7 @@ Shader "Custom/PaintShader"
 
             half4 frag(Varyings IN) : SV_Target
             {
-                float4 final = 1;
+                float4 final = float4(1,1,1,0);
                 for(int i = 0; i < _TextureCount; i++){
                     float4x4 cam = _CameraDataBuffer[i]._CameraTransform;
                     float4 pos = mul(_CameraDataBuffer[i]._FrustrumMatrix,mul(cam,mul(unity_ObjectToWorld, float4(IN.positionOS.xyz,1))));
@@ -99,6 +101,8 @@ Shader "Custom/PaintShader"
                     #if UNITY_UV_STARTS_AT_TOP
                         sc.y = 1-sc.y;
                     #endif
+
+                    
                     
                     half4 color = SAMPLE_TEXTURE2D_ARRAY(_TextureArray, sampler_PointClamp, sc.xy, i);
                     float depth = (LinearEyeDepth(decode_float(color.ba), _ZBufferParams) - (currentScreenPos.z));
@@ -107,11 +111,14 @@ Shader "Custom/PaintShader"
                     if(sc.y > _TextureArray_TexelSize.y*2 && sc.y < 1-_TextureArray_TexelSize.y*2 && sc.x > _TextureArray_TexelSize.x*2 && sc.x < 1 -_TextureArray_TexelSize.x*2 
                         && currentScreenPos.z > 0 && depth > 0)
                     {
-                        final.rgb = lerp(final.rgb, GetColor(color.r), color.g);//float4(sc.xy,0,1);
+                        final.rgb = lerp(final.rgb, GetColor(color.r), color.g > final.a);//float4(sc.xy,0,1);
+                        final.a = max(final.a, color.g);
                     }
+
+                    
                 }
 
-                for(int n = 0; n < _PlayerCount; n++){
+                for(int n = 0; n < 8; n++){
                     if(_PlayerDrawing[n] > 0.5)
                     {
                         float4 pos = mul(_CurrentCameraDataBuffer[n]._FrustrumMatrix,mul(_CurrentCameraDataBuffer[n]._CameraTransform,mul(unity_ObjectToWorld, float4(IN.positionOS.xyz,1))));
@@ -130,7 +137,11 @@ Shader "Custom/PaintShader"
                             && currentScreenPos.z > 0 && depth > 0){
                             
                             //color.rg *= depth;
-                            final.rgb = lerp(final.rgb, GetColor(color.r), color.g);//float4(sc.xy,0,1);
+                            final.rgb = lerp(final.rgb, GetColor(color.r), color.g > final.a);//float4(sc.xy,0,1);
+                            if(n != _Player)
+                            {
+                                final.a = max(final.a, color.g);
+                            }
                         }
                     
                         float2 mouse = _MouseData.xy/_ScreenParams.xy;
@@ -138,11 +149,16 @@ Shader "Custom/PaintShader"
                         mouse -= sc - float2(1/_MouseData.w,1/_MouseData.w)*float2(_ScreenParams.y/_ScreenParams.x,1)*0.5;
                         mouse.x *= (_ScreenParams.x/_ScreenParams.y);
                         mouse *= _MouseData.w;
-
-                        final = lerp(final, 0.5, SAMPLE_TEXTURE2D(_BrushTexture,sampler_PointClamp,mouse).a * 0.5);
+                        
+                        if(n == _Player)
+                        {
+                            final.rgb = lerp(final.rgb, 0.5, SAMPLE_TEXTURE2D(_BrushTexture,sampler_PointClamp,mouse).a * 0.8); 
+                        }                      
+                        
                     }
                 }
-
+                
+                
                 return max(final, fwidth(final));
                 
             }

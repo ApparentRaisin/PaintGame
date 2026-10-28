@@ -47,7 +47,7 @@ Shader "Custom/Outline"
                 normalDiff += 1-dot(SampleSceneNormals(input.texcoord +_CameraNormalsTexture_TexelSize.xy*float2(0,1.5)) * 2 -1,
                 SampleSceneNormals(input.texcoord-_CameraNormalsTexture_TexelSize.xy*float2(0,1.5)) * 2 -1);
 
-                return  color - (abs(normalDiff) * (Linear01Depth(SampleSceneDepth(input.texcoord),_ZBufferParams) < 1)  + (abs(insidance * depth) > 0.001)) ;
+                return  color - ((abs(normalDiff)>0.8) * (Linear01Depth(SampleSceneDepth(input.texcoord),_ZBufferParams) < 1)  + (abs(insidance * depth) > 0.001)) ;
             }
             
             ENDHLSL

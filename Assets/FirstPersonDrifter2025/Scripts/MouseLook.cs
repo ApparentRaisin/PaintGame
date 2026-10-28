@@ -13,7 +13,7 @@ using System.Collections.Generic;
 using UnityEngine.InputSystem;
 using Unity.Netcode.Components;
 
-public class MouseLook : NetworkTransform
+public class MouseLook : MonoBehaviour
 {
  
 	public enum RotationAxes { MouseX = 1, MouseY = 2 }
@@ -45,6 +45,7 @@ public class MouseLook : NetworkTransform
 	InputAction look;
 
 	public static bool locked = false;
+	public bool singlePlayer;
 	
 	void Start ()
 	{
@@ -59,9 +60,10 @@ public class MouseLook : NetworkTransform
  
 	void Update ()
 	{
-		if(locked || !IsSpawned || !HasAuthority)
+		if(locked)
             return;
-			
+		
+		Debug.Log(axes);
 		Vector2 lookVector = look.ReadValue<Vector2>();
 		if (axes == RotationAxes.MouseX)
 		{			

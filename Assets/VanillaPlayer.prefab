@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 7531601063973349870}
   - component: {fileID: 3212378486951562054}
   - component: {fileID: 5195890579079251798}
+  - component: {fileID: 4781128550618128032}
   m_Layer: 0
   m_Name: VanillaPlayer
   m_TagString: Player
@@ -159,40 +160,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 772aa5b11b2f44377adfea31f5015913, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ShowTopMostFoldoutHeaderGroup: 1
-  NetworkTransformExpanded: 0
-  AutoOwnerAuthorityTickOffset: 1
-  PositionInterpolationType: 0
-  RotationInterpolationType: 0
-  ScaleInterpolationType: 0
-  PositionLerpSmoothing: 1
-  PositionMaxInterpolationTime: 0.1
-  RotationLerpSmoothing: 1
-  RotationMaxInterpolationTime: 0.1
-  ScaleLerpSmoothing: 1
-  ScaleMaxInterpolationTime: 0.1
-  AuthorityMode: 0
-  TickSyncChildren: 0
-  UseUnreliableDeltas: 0
-  SyncPositionX: 1
-  SyncPositionY: 1
-  SyncPositionZ: 1
-  SyncRotAngleX: 1
-  SyncRotAngleY: 1
-  SyncRotAngleZ: 1
-  SyncScaleX: 1
-  SyncScaleY: 1
-  SyncScaleZ: 1
-  PositionThreshold: 0.001
-  RotAngleThreshold: 0.01
-  ScaleThreshold: 0.01
-  UseQuaternionSynchronization: 0
-  UseQuaternionCompression: 0
-  UseHalfFloatPrecision: 0
-  InLocalSpace: 0
-  SwitchTransformSpaceWhenParented: 0
-  Interpolate: 1
-  SlerpPosition: 0
   walkSpeed: 6
   runSpeed: 10
   enableRunning: 0
@@ -204,6 +171,7 @@ MonoBehaviour:
   airControl: 1
   antiBumpFactor: 0.75
   antiBunnyHopFactor: 1
+  singlePlayer: 0
 --- !u!114 &5195890579079251798
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -216,6 +184,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a9933f332744a448082eea5c70a300, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  axes: 1
+  invertY: 0
+  sensitivityX: 0.4
+  sensitivityY: 0.2
+  minimumX: -360
+  maximumX: 360
+  minimumY: -85
+  maximumY: 85
+  framesOfSmoothing: 5
+  singlePlayer: 0
+--- !u!114 &4781128550618128032
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 755984575470733036}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e96cb6065543e43c4a752faaa1468eb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.Components.NetworkTransform
   ShowTopMostFoldoutHeaderGroup: 1
   NetworkTransformExpanded: 0
   AutoOwnerAuthorityTickOffset: 1
@@ -250,15 +240,6 @@ MonoBehaviour:
   SwitchTransformSpaceWhenParented: 0
   Interpolate: 1
   SlerpPosition: 0
-  axes: 1
-  invertY: 0
-  sensitivityX: 0.4
-  sensitivityY: 0.2
-  minimumX: -360
-  maximumX: 360
-  minimumY: -85
-  maximumY: 85
-  framesOfSmoothing: 5
 --- !u!1 &7822172034343760181
 GameObject:
   m_ObjectHideFlags: 0
@@ -273,6 +254,7 @@ GameObject:
   - component: {fileID: 7044676687728592023}
   - component: {fileID: 6344456475362274140}
   - component: {fileID: 3898553084329109111}
+  - component: {fileID: 891281685889655106}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -410,6 +392,44 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a9933f332744a448082eea5c70a300, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  axes: 2
+  invertY: 0
+  sensitivityX: 0.4
+  sensitivityY: 0.2
+  minimumX: -360
+  maximumX: 360
+  minimumY: -85
+  maximumY: 85
+  framesOfSmoothing: 5
+  singlePlayer: 0
+--- !u!114 &3898553084329109111
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7822172034343760181}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e45e2f51e3b14f648bafdd477ee25c2a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: '::'
+  ShowTopMostFoldoutHeaderGroup: 1
+  paintbrushTexture: {fileID: 2800000, guid: 2e47554a7ff596a4e9e335f161154c6e, type: 3}
+  test: {fileID: 0}
+  singlePlayer: 0
+--- !u!114 &891281685889655106
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7822172034343760181}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e96cb6065543e43c4a752faaa1468eb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.Components.NetworkTransform
   ShowTopMostFoldoutHeaderGroup: 1
   NetworkTransformExpanded: 0
   AutoOwnerAuthorityTickOffset: 1
@@ -444,26 +464,3 @@ MonoBehaviour:
   SwitchTransformSpaceWhenParented: 0
   Interpolate: 1
   SlerpPosition: 0
-  axes: 2
-  invertY: 0
-  sensitivityX: 0.4
-  sensitivityY: 0.2
-  minimumX: -360
-  maximumX: 360
-  minimumY: -85
-  maximumY: 85
-  framesOfSmoothing: 5
---- !u!114 &3898553084329109111
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7822172034343760181}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e45e2f51e3b14f648bafdd477ee25c2a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: '::'
-  ShowTopMostFoldoutHeaderGroup: 1
-  paintbrushTexture: {fileID: 2800000, guid: 2e47554a7ff596a4e9e335f161154c6e, type: 3}

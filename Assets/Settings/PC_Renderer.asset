@@ -25,6 +25,31 @@ MonoBehaviour:
     bindDepthStencilBuffer: 0
     blitMaterial: {fileID: 2100000, guid: a333fadb9bc1b74298800a9e6db6c58b, type: 2}
     blitPassIndex: 0
+--- !u!114 &-1994011329103829786
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6a096608fb76916e8d2858b202248e2, type: 3}
+  m_Name: Blit
+  m_EditorClassIdentifier: Assembly-CSharp::Cyan.Blit
+  m_Active: 1
+  settings:
+    injectionPoint: 500
+    requirements: 0
+    globalTextures: []
+    dstType: 1
+    showInSceneView: 0
+    dstGlobalTexture: _LayerTexture
+    colorFormat: 2
+    format: 25
+    bindDepthStencilBuffer: 0
+    blitMaterial: {fileID: 2100000, guid: 16e3f1fb0798f8344bb06aede19b3a72, type: 2}
+    blitPassIndex: 0
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -53,7 +78,8 @@ MonoBehaviour:
   - {fileID: 7833122117494664109}
   - {fileID: 4346523464102738525}
   - {fileID: -2372256897065525018}
-  m_RendererFeatureMap: ad6b866f10d7b46c5d7abecd0ff4513ce66070beeb0c14df
+  - {fileID: -1994011329103829786}
+  m_RendererFeatureMap: ad6b866f10d7b46c5d7abecd0ff4513ce66070beeb0c14dfe664a9ca42d953e4
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}

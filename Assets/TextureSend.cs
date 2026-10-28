@@ -79,7 +79,7 @@ public class TextureSend : NetworkBehaviour
         reader.ReadBytesSafe(ref data, dataLength); // Read the bytes from the reader into the data array
 
         // Recreate the texture from the byte array
-        Texture2D texture = new Texture2D(2, 2, TextureFormat.ARGB32, false, true); // Create a new texture with default size
+        Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA64, false, true); // Create a new texture with default size
         //Message m = fromBytes(data);
         texture.LoadImage(data); // Load the texture from the byte array
 

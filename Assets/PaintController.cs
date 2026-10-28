@@ -16,11 +16,14 @@ public class PaintController : NetworkBehaviour
     public static void SetCurrentCameraData(CameraData data, int player)
     {
         currentCamera[player] = data;
+        currentCameraBuffer.SetData(currentCamera);
+        Shader.SetGlobalBuffer("_CurrentCameraDataBuffer", currentCameraBuffer);
     }
 
     public static void SetPaintTex(Texture2D tex, int player)
     {
         Graphics.Blit(tex, paintTex, 0, player);
+        Shader.SetGlobalTexture("_CurrentPaintingTexture", paintTex);
     }
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     static void Prime()
@@ -42,6 +45,11 @@ public class PaintController : NetworkBehaviour
             Shader.SetGlobalBuffer("_CurrentCameraDataBuffer", currentCameraBuffer);
             primed = true;
         }
+    }
+
+    void Update()
+    {
+        test = paintTex;
     }
 
     void OnDisable()
@@ -75,7 +83,7 @@ public class PaintController : NetworkBehaviour
         RenderTexture.ReleaseTemporary(tempTex);
         return tex;
     }
-    public static void SaveTexture(string session, string sceneName, int player)
+    public static void SaveTexture(string session, string sceneName, int player, bool singlePlayer)
     {
         Prime();
         byte[] bytes;
@@ -87,7 +95,10 @@ public class PaintController : NetworkBehaviour
         Directory.CreateDirectory(Application.dataPath + "/Pictures/"+session + "_" + sceneName+"/");
         File.WriteAllBytes(Application.dataPath + "/Pictures/"+session + "_" + sceneName+"/Pic-" + currentTextureCount + ".png", bytes);
         currentTextureCount++;
-        TextureSend.instance.SendData(bytes);
+
+        if(!singlePlayer)
+            TextureSend.instance.SendData(bytes);
+            
         Shader.SetGlobalBuffer("_CameraDataBuffer", cameraDataBuffer);
         Shader.SetGlobalBuffer("_MovingTransfromBuffer", movingTransformBuffer);
         Shader.SetGlobalTexture("_TextureArray", textureArray);
@@ -136,7 +147,6 @@ public class PaintController : NetworkBehaviour
             byte[] bytes = File.ReadAllBytes(p);
             Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false, true) { filterMode = FilterMode.Point};
             ImageConversion.LoadImage(tex, bytes);
-            TextureSend.instance.SendData(bytes);
             AddTextureToArray(tex, textureArray, i);
             i++;
         }
@@ -198,12 +208,10 @@ public class PaintController : NetworkBehaviour
         currentCameraBuffer.SetData(currentCamera);
         movingTransformBuffer.SetData(movingObjectTransforms);
         Shader.SetGlobalBuffer("_CameraDataBuffer", cameraDataBuffer);
-        Shader.SetGlobalBuffer("_CurrentCameraDataBuffer", currentCameraBuffer);
+        
         Shader.SetGlobalBuffer("_MovingTransforms", movingTransformBuffer);
         Shader.SetGlobalTexture("_CurrentPaintingTexture", paintTex);
     }
-
-    
     static void CollectTransforms()
     {
         int start = currentTextureCount * 60;

@@ -39,7 +39,8 @@ Shader "Custom/PaintShaderMoving"
             float4 _TextureArray_TexelSize;
 
             float _PlayerCount;
-            float _PlayerDrawing[8];            
+            float _PlayerDrawing[8];
+            float _Player;            
 
             struct CameraData{
                 float4x4 _CameraTransform;
@@ -91,7 +92,7 @@ Shader "Custom/PaintShaderMoving"
 
             half4 frag(Varyings IN) : SV_Target
             {
-                float4 final = 1;
+                float4 final = float4(1,1,1,0);
                 for(int i = 0; i < _TextureCount; i++){
                     float4x4 cam = _CameraDataBuffer[i]._CameraTransform;
                     float4 pos = mul(_CameraDataBuffer[i]._FrustrumMatrix,mul(cam,mul(_MovingTransforms[i*60 + _objectIndex], float4(IN.positionOS.xyz,1))));
@@ -110,12 +111,12 @@ Shader "Custom/PaintShaderMoving"
                     if(sc.y > _TextureArray_TexelSize.y*2 && sc.y < 1-_TextureArray_TexelSize.y*2 && sc.x > _TextureArray_TexelSize.x*2 && sc.x < 1 -_TextureArray_TexelSize.x*2 
                         && currentScreenPos.z > 0 && depth > 0)
                     {
-                        final.rgb = lerp(final.rgb, GetColor(color.r), color.g);//float4(sc.xy,0,1);
+                        final.rgb = lerp(final.rgb, GetColor(color.r), color.g > final.a);//float4(sc.xy,0,1);
                     }
-                    
+                    final.a = max(final.a, color.g);
                 }
 
-                for(int n = 0; n < _PlayerCount; n++){
+                for(int n = 0; n < 8; n++){
                     if(_PlayerDrawing[n] > 0.5)
                     {
                         float4 pos = mul(_CurrentCameraDataBuffer[n]._FrustrumMatrix,mul(_CurrentCameraDataBuffer[n]._CameraTransform,mul(_MovingTransforms[(_TextureCount*60) + _objectIndex], float4(IN.positionOS.xyz,1))));
@@ -134,7 +135,7 @@ Shader "Custom/PaintShaderMoving"
                             && currentScreenPos.z > 0 && depth > 0){
                             
                             //color.rg *= depth;
-                            final.rgb = lerp(final.rgb, GetColor(color.r), color.g);//float4(sc.xy,0,1);
+                            final.rgb = lerp(final.rgb, GetColor(color.r), color.g > final.a);//float4(sc.xy,0,1);
                         }
                     
                         float2 mouse = _MouseData.xy/_ScreenParams.xy;
@@ -143,7 +144,12 @@ Shader "Custom/PaintShaderMoving"
                         mouse.x *= (_ScreenParams.x/_ScreenParams.y);
                         mouse *= _MouseData.w;
 
-                        final = lerp(final, 0.5, SAMPLE_TEXTURE2D(_BrushTexture,sampler_PointClamp,mouse).a * 0.5);
+                        final.rgb = lerp(final.rgb, 0.5, SAMPLE_TEXTURE2D(_BrushTexture,sampler_PointClamp,mouse).a * 0.5);
+
+                        if(n != _Player)
+                        {
+                            final.a = max(final.a, color.g);
+                        }
                     }
                 }
                 
