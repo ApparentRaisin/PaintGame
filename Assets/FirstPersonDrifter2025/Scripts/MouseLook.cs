@@ -63,7 +63,6 @@ public class MouseLook : MonoBehaviour
 		if(locked)
             return;
 		
-		Debug.Log(axes);
 		Vector2 lookVector = look.ReadValue<Vector2>();
 		if (axes == RotationAxes.MouseX)
 		{			

@@ -16,7 +16,7 @@ public class MovingTransformsController : MonoBehaviour
     public Matrix4x4[] GetObjectTransforms()
     {
         Matrix4x4[] movingObjectMat = new Matrix4x4[60];
-        for(int i = 0; i < Mathf.Min(movingObjectTransform.Length,60); i++)
+        for(int i = 8; i < Mathf.Min(movingObjectTransform.Length,60); i++)
         {
             movingObjectMat[i] = movingObjectTransform[i].localToWorldMatrix;
         }
