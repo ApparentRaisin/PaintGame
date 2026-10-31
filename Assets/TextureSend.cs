@@ -19,7 +19,9 @@ public class TextureSend : NetworkBehaviour
     private void Start()
     {
         // Bind the handler after NetworkManager initializes
-        NetworkManager.Singleton.OnClientConnectedCallback += OnNetworkReady;
+        if(NetworkManager.Singleton != null)
+            NetworkManager.Singleton.OnClientConnectedCallback += OnNetworkReady;
+        
         instance = this;
     }
 
@@ -59,6 +61,7 @@ public class TextureSend : NetworkBehaviour
         await Awaitable.MainThreadAsync();
         
         SendData(encoded.ToArray());
+        buffer.Dispose();
     }
 
     public void SendData(byte[] bytes)

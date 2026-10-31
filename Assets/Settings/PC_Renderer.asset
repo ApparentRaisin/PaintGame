@@ -39,7 +39,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Cyan.Blit
   m_Active: 1
   settings:
-    injectionPoint: 500
+    injectionPoint: 300
     requirements: 0
     globalTextures: []
     dstType: 1
@@ -104,7 +104,7 @@ MonoBehaviour:
   m_RenderingMode: 2
   m_DepthPrimingMode: 0
   m_CopyDepthMode: 0
-  m_DepthAttachmentFormat: 0
+  m_DepthAttachmentFormat: 93
   m_DepthTextureFormat: 93
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 0
@@ -126,7 +126,7 @@ MonoBehaviour:
   requirements: 3
   passMaterial: {fileID: 2100000, guid: 005f0d26752afde44aad65f48912b398, type: 2}
   passIndex: 0
-  bindDepthStencilAttachment: 0
+  bindDepthStencilAttachment: 1
   m_Version: 1
 --- !u!114 &4573132315196924753
 MonoBehaviour:

@@ -19,9 +19,6 @@ public class GlobalCameraData : NetworkBehaviour
     float brushSize = 0.5f;
     int kernelHandle;
     static float[] playerDrawing = new float[8];
-    public Texture2D test;
-
-    bool started = false;
 
     public bool singlePlayer;
     void Start()
@@ -47,7 +44,7 @@ public class GlobalCameraData : NetworkBehaviour
         altAction.started += ToggleDraw;
         
         computeShader = Resources.Load<ComputeShader>("ComputeShaders/DrawCompute");
-        if(NetworkManager.LocalClientId == NetworkManager.CurrentSessionOwner || singlePlayer)
+        if(singlePlayer || NetworkManager?.LocalClientId == NetworkManager.CurrentSessionOwner)
         {
             PaintController.LoadAllTextures(ConnectionManager.sessionName,SceneManager.GetActiveScene().name);
         }
@@ -169,7 +166,7 @@ public class GlobalCameraData : NetworkBehaviour
             brushSize = Mathf.Clamp01(brushSize);
             
             Debug.Log(brushSize);
-            Vector4 mouseData = new Vector4(mPos.x,mPos.y,click,1 + (brushSize * brushSize) * 15);
+            Vector4 mouseData = new Vector4(mPos.x,mPos.y,click,1f + (brushSize * brushSize) * 50);
 
             kernelHandle = computeShader.FindKernel("CSMain");
             computeShader.SetTexture(kernelHandle,"Result", PaintController.GetCurrentPaintTex());

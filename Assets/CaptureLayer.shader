@@ -22,7 +22,7 @@ Shader "Custom/CaptureLayer"
 
             float4 Frag (Varyings input) : SV_Target
             {
-                float color = SAMPLE_TEXTURE2D(_BlitTexture, sampler_LinearClamp, input.texcoord).a;
+                float color = SAMPLE_TEXTURE2D(_BlitTexture, sampler_LinearClamp, input.texcoord).g;
                 return color;
             }
             

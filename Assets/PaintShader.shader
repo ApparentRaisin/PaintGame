@@ -29,12 +29,13 @@ Shader "Custom/PaintShader"
 
             TEXTURE2D_ARRAY(_CurrentPaintingTexture);
             SAMPLER(sampler_CurrentPaintingTexture);
-
+            
             TEXTURE2D_ARRAY(_TextureArray);
-            TEXTURE2D(_ColorLookup);
 
             TEXTURE2D(_BrushTexture);
             float4 _MouseData;
+
+            TEXTURE2D(_ColorLookup);
 
             float _PlayerCount;
             float _PlayerDrawing[8];
@@ -60,6 +61,7 @@ Shader "Custom/PaintShader"
                 Varyings OUT;
                 OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
                 OUT.positionOS = IN.positionOS;
+                OUT.uv = IN.uv;
                 return OUT;
             }
 
@@ -83,14 +85,17 @@ Shader "Custom/PaintShader"
                 return m * exp2(e);
             }
 
-            float3 GetColor(float v){
-                v = (v*256.);
-                return (SAMPLE_TEXTURE2D(_ColorLookup, sampler_PointClamp, float2((v/16.) + 0.5,(v%16.) + 0.5)/16.));
+            float hash13(float3 p3)
+            {
+            	p3  = frac(p3 * .1031);
+                p3 += dot(p3, p3.zyx + 33.33);
+                return frac((p3.x + p3.y) * p3.z);
             }
 
             half4 frag(Varyings IN) : SV_Target
             {
-                float4 final = float4(1,1,1,0);
+                float4 col = SAMPLE_TEXTURE2D(_ColorLookup, sampler_LinearClamp, IN.uv);
+                float4 final = float4(1,0,0,0);
                 for(int i = 0; i < _TextureCount; i++){
                     float4x4 cam = _CameraDataBuffer[i]._CameraTransform;
                     float4 pos = mul(_CameraDataBuffer[i]._FrustrumMatrix,mul(cam,mul(unity_ObjectToWorld, float4(IN.positionOS.xyz,1))));
@@ -101,8 +106,6 @@ Shader "Custom/PaintShader"
                     #if UNITY_UV_STARTS_AT_TOP
                         sc.y = 1-sc.y;
                     #endif
-
-                    
                     
                     half4 color = SAMPLE_TEXTURE2D_ARRAY(_TextureArray, sampler_PointClamp, sc.xy, i);
                     float depth = (LinearEyeDepth(decode_float(color.ba), _ZBufferParams) - (currentScreenPos.z));
@@ -111,8 +114,8 @@ Shader "Custom/PaintShader"
                     if(sc.y > _TextureArray_TexelSize.y*2 && sc.y < 1-_TextureArray_TexelSize.y*2 && sc.x > _TextureArray_TexelSize.x*2 && sc.x < 1 -_TextureArray_TexelSize.x*2 
                         && currentScreenPos.z > 0 && depth > 0)
                     {
-                        final.rgb = lerp(final.rgb, GetColor(color.r), color.g > final.a);//float4(sc.xy,0,1);
-                        final.a = max(final.a, color.g);
+                        final.r = lerp(final.r, color.r, color.g > final.a);//float4(sc.xy,0,1);
+                        final.g = max(final.g, color.g);
                     }
 
                     
@@ -137,14 +140,14 @@ Shader "Custom/PaintShader"
                             && currentScreenPos.z > 0 && depth > 0){
                             
                             //color.rg *= depth;
-                            final.rgb = lerp(final.rgb, GetColor(color.r), color.g > final.a);//float4(sc.xy,0,1);
+                            final.r = lerp(final.r, color.r, color.g > final.a);//float4(sc.xy,0,1);
                             if(n != _Player)
                             {
-                                final.a = max(final.a, color.g);
+                                final.g = max(final.a, color.g);
                             }
                         }
                     
-                        float2 mouse = _MouseData.xy/_ScreenParams.xy;
+                        /*float2 mouse = _MouseData.xy/_ScreenParams.xy;
 
                         mouse -= sc - float2(1/_MouseData.w,1/_MouseData.w)*float2(_ScreenParams.y/_ScreenParams.x,1)*0.5;
                         mouse.x *= (_ScreenParams.x/_ScreenParams.y);
@@ -152,13 +155,14 @@ Shader "Custom/PaintShader"
                         
                         if(n == _Player)
                         {
-                            final.rgb = lerp(final.rgb, 0.5, SAMPLE_TEXTURE2D(_BrushTexture,sampler_PointClamp,mouse).a * 0.8); 
-                        }                      
+                            final.r = lerp(final.rgb, 0.5, SAMPLE_TEXTURE2D(_BrushTexture,sampler_PointClamp,mouse).a * 0.8); 
+                        }*/                      
                         
                     }
                 }
                 
-                
+                final.a = 0;
+                final.b = hash13(col.rgb);
                 return max(final, fwidth(final));
                 
             }
